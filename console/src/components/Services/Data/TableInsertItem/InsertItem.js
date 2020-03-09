@@ -92,6 +92,7 @@ class InsertItem extends Component {
           hasDefault || isIdentity
             ? refs[colName].defaultNode
             : refs[colName].nullNode;
+
         refs[colName].insertRadioNode.checked = !!textValue.length;
         radioToSelectWhenEmpty.checked = !textValue.length;
       };

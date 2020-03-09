@@ -7,7 +7,8 @@ import {
   showSuccessNotification,
 } from '../../Common/Notification';
 import dataHeaders from '../Common/Headers';
-import { enumColumnMapping } from '../../../Common/utils/pgUtils';
+import { getEnumColumnMappings } from '../../../Common/utils/pgUtils';
+import { getEnumOptionsQuery } from '../../../Common/utils/v1QueryUtils';
 
 const I_SET_CLONE = 'InsertItem/I_SET_CLONE';
 const I_RESET = 'InsertItem/I_RESET';
@@ -115,7 +116,11 @@ const fetchEnumOptions = () => {
       tables: { allSchemas, currentTable, currentSchema },
     } = getState();
 
-    const requests = enumColumnMapping(allSchemas, currentTable, currentSchema);
+    const requests = getEnumColumnMappings(
+      allSchemas,
+      currentTable,
+      currentSchema
+    );
 
     if (!requests) return;
 
@@ -127,16 +132,8 @@ const fetchEnumOptions = () => {
     const url = Endpoints.query;
 
     requests.forEach(request => {
-      const req = {
-        type: 'select',
-        args: {
-          table: {
-            name: request.enumTableName,
-            schema: currentSchema,
-          },
-          columns: [request.enumColumnName],
-        },
-      };
+      const req = getEnumOptionsQuery(request, currentSchema);
+
       return dispatch(
         requestAction(url, {
           ...options,
