@@ -5,6 +5,22 @@ import JsonInput from '../../../../Common/CustomInputTypes/JsonInput';
 import TextInput from '../../../../Common/CustomInputTypes/TextInput';
 import styles from '../../../../Common/TableCommon/Table.scss';
 import { isColumnAutoIncrement } from '../../../../Common/utils/pgUtils';
+import SearchableSelect from '../../../../../components/Common/SearchableSelect/SearchableSelect';
+
+const searchableSelectStyles = {
+  container: {
+    width: '270px',
+  },
+  control: {
+    minHeight: '34px',
+  },
+  dropdownIndicator: {
+    padding: '5px',
+  },
+  valueContainer: {
+    padding: '0px 12px',
+  },
+};
 
 export const TypedInput = ({
   enumOptions,
@@ -15,6 +31,8 @@ export const TypedInput = ({
   onChange,
   onFocus,
   prevValue,
+  fkOptions,
+  // onSearchValueChange,
 }) => {
   const {
     column_name: colName,
@@ -49,6 +67,7 @@ export const TypedInput = ({
     type: 'text',
     placeholder: 'text',
   };
+
   if (enumOptions && enumOptions[colName]) {
     return (
       <select
@@ -65,6 +84,23 @@ export const TypedInput = ({
           </option>
         ))}
       </select>
+    );
+  }
+
+  if (fkOptions && fkOptions[colName]) {
+    const options = fkOptions[colName].map(o => ({ label: o, value: o }));
+    delete standardInputProps.ref; // TODO
+    return (
+      <SearchableSelect
+        {...standardInputProps}
+        options={options}
+        onChange={console.log}
+        // value={/* to do */}
+        bsClass={styles.insertBox}
+        styleOverrides={searchableSelectStyles}
+        filterOption="prefix"
+        placeholder="column_type"
+      />
     );
   }
 

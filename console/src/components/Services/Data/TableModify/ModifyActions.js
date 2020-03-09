@@ -6,6 +6,7 @@ import {
   handleMigrationErrors,
   makeMigrationCall,
   LOAD_SCHEMA,
+  setConsoleFKOptions,
 } from '../DataActions';
 import _push from '../push';
 import { SET_SQL } from '../RawSQL/Actions';
@@ -107,6 +108,18 @@ const SET_CHECK_CONSTRAINTS = 'ModifyTable/SET_CHECK_CONSTRAINTS';
 const setCheckConstraints = constraints => ({
   type: SET_CHECK_CONSTRAINTS,
   constraints,
+});
+
+const SET_DISPLAY_COLUMN_NAME = 'ModifyTable/SET_DISPLAY_COLUMN_NAME';
+const REMOVE_DISPLAY_COLUMN_NAME = 'ModifyTable/REMOVE_DISPLAY_COLUMN_NAME';
+
+const setDisplayColumnName = (columnName, index) => ({
+  type: SET_DISPLAY_COLUMN_NAME,
+  data: { columnName, index },
+});
+const removeDisplayColumnName = index => ({
+  type: REMOVE_DISPLAY_COLUMN_NAME,
+  data: { index },
 });
 
 const RESET = 'ModifyTable/RESET';
@@ -215,9 +228,7 @@ export const saveComputedField = (
     );
   }
 
-  const migrationName = `save_computed_field_${computedField.table_schema}_${
-    computedField.table_name
-  }_${computedFieldName}`;
+  const migrationName = `save_computed_field_${computedField.table_schema}_${computedField.table_name}_${computedFieldName}`;
   const requestMsg = 'Saving computed field...';
   const successMsg = 'Saving computed field successful';
   const errorMsg = 'Saving computed field failed';
@@ -261,9 +272,7 @@ export const deleteComputedField = (computedField, table) => (
     )
   );
 
-  const migrationName = `delete_computed_field_${computedField.table_schema}_${
-    computedField.table_name
-  }_${computedFieldName}`;
+  const migrationName = `delete_computed_field_${computedField.table_schema}_${computedField.table_name}_${computedFieldName}`;
   const requestMsg = 'Deleting computed field...';
   const successMsg = 'Deleting computed field successful';
   const errorMsg = 'Deleting computed field failed';
@@ -527,8 +536,10 @@ const saveForeignKeys = (index, tableSchema, columns) => {
       onDelete,
       constraintName,
     } = fk;
+    const displayNameMappings = getState().tables.modify.displayColumnName;
     const mappingObj = {};
     const filteredMappings = [];
+    const displayColumnsMappings = [];
     for (let _i = colMappings.length - 1; _i >= 0; _i--) {
       const cm = colMappings[_i];
       if (cm.column && cm.refColumn) {
@@ -544,6 +555,16 @@ const saveForeignKeys = (index, tableSchema, columns) => {
         }
         mappingObj[cm.column] = cm.refColumn;
         filteredMappings.push(cm);
+      }
+
+      // TODO: simplify
+      if (displayNameMappings && displayNameMappings[_i]) {
+        displayColumnsMappings.push({
+          displayColumnName: displayNameMappings[_i] || cm.refColumn,
+          refColumnName: cm.refColumn,
+          columnName: columns[cm.column].name,
+          refTableName,
+        });
       }
     }
     const lcols = filteredMappings.map(cm => `"${columns[cm.column].name}"`);
@@ -647,6 +668,14 @@ const saveForeignKeys = (index, tableSchema, columns) => {
       dispatch({ type: UPDATE_MIGRATION_STATUS_ERROR, data: err });
     };
 
+    const fkDisplayOpts = {
+      tableName,
+      schemaName,
+      mappings: displayColumnsMappings,
+    };
+
+    dispatch(setConsoleFKOptions(fkDisplayOpts));
+
     makeMigrationCall(
       dispatch,
       getState,
@@ -667,9 +696,7 @@ const removeForeignKey = (index, tableSchema) => {
     const tableName = tableSchema.table_name;
     const schemaName = tableSchema.table_schema;
     const oldConstraint = tableSchema.foreign_key_constraints[index];
-    const upSql = `alter table "${schemaName}"."${tableName}" drop constraint "${
-      oldConstraint.constraint_name
-    }";`;
+    const upSql = `alter table "${schemaName}"."${tableName}" drop constraint "${oldConstraint.constraint_name}";`;
     const downSql = `alter table "${schemaName}"."${tableName}" add foreign key (${Object.keys(
       oldConstraint.column_mapping
     )
@@ -683,9 +710,7 @@ const removeForeignKey = (index, tableSchema) => {
     } on delete ${pgConfTypes[oldConstraint.on_delete]};`;
     const migrationUp = [getRunSqlQuery(upSql)];
     const migrationDown = [getRunSqlQuery(downSql)];
-    const migrationName = `delete_fk_${schemaName}_${tableName}_${
-      oldConstraint.constraint_name
-    }`;
+    const migrationName = `delete_fk_${schemaName}_${tableName}_${oldConstraint.constraint_name}`;
     const requestMsg = 'Deleting foreign key...';
     const successMsg = 'Foreign key deleted';
     const errorMsg = 'Deleting foreign key failed';
@@ -800,9 +825,7 @@ const deleteTrigger = (trigger, table) => {
     let downMigrationSql = '';
 
     downMigrationSql += `CREATE TRIGGER "${triggerName}"
-${trigger.action_timing} ${
-  trigger.event_manipulation
-} ON "${tableSchema}"."${tableName}"
+${trigger.action_timing} ${trigger.event_manipulation} ON "${tableSchema}"."${tableName}"
 FOR EACH ${trigger.action_orientation} ${trigger.action_statement};`;
 
     if (trigger.comment) {
@@ -1974,9 +1997,7 @@ const removeUniqueKey = (index, tableName, existingConstraints, callback) => {
     // Up migration: Drop the constraint
     const sqlUp = [
       getRunSqlQuery(
-        `alter table "${currentSchema}"."${tableName}" drop constraint "${
-          existingConstraint.constraint_name
-        }";`
+        `alter table "${currentSchema}"."${tableName}" drop constraint "${existingConstraint.constraint_name}";`
       ),
     ];
 
@@ -2275,9 +2296,7 @@ const saveUniqueKey = (
     if (index < numUniqueKeys - 1) {
       upMigration.push(
         getRunSqlQuery(
-          `alter table "${currentSchema}"."${tableName}" drop constraint "${
-            existingConstraint.constraint_name
-          }";`
+          `alter table "${currentSchema}"."${tableName}" drop constraint "${existingConstraint.constraint_name}";`
         )
       );
     }
@@ -2355,6 +2374,8 @@ export {
   TOGGLE_ENUM_FAILURE,
   MODIFY_ROOT_FIELD,
   SET_CHECK_CONSTRAINTS,
+  SET_DISPLAY_COLUMN_NAME,
+  REMOVE_DISPLAY_COLUMN_NAME,
   changeTableName,
   fetchViewDefinition,
   handleMigrationErrors,
@@ -2389,4 +2410,6 @@ export {
   toggleEnumFailure,
   modifyRootFields,
   setCheckConstraints,
+  setDisplayColumnName,
+  removeDisplayColumnName,
 };

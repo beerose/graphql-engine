@@ -60,6 +60,8 @@ const MAKE_REQUEST = 'ModifyTable/MAKE_REQUEST';
 const REQUEST_SUCCESS = 'ModifyTable/REQUEST_SUCCESS';
 const REQUEST_ERROR = 'ModifyTable/REQUEST_ERROR';
 
+const SET_HASURA_OPTS = 'Data/SET_HASURA_OPTS';
+
 const initQueries = {
   schemaList: {
     type: 'select',
@@ -186,6 +188,44 @@ const initQueries = {
       },
     },
   },
+};
+
+const loadConsoleOpts = () => {
+  return (dispatch, getState) => {
+    const url = Endpoints.getSchema;
+    const options = {
+      credentials: globalCookiePolicy,
+      method: 'POST',
+      headers: dataHeaders(getState),
+      body: JSON.stringify({
+        type: 'select',
+        args: {
+          table: {
+            name: 'hdb_version',
+            schema: 'hdb_catalog',
+          },
+          columns: ['hasura_uuid', 'console_state'],
+        },
+      }),
+    };
+
+    return dispatch(requestAction(url, options)).then(
+      data => {
+        console.log({ data });
+        if (data.length !== 0) {
+          dispatch({
+            type: SET_HASURA_OPTS,
+            data: data[0].console_state,
+          });
+        }
+      },
+      error => {
+        console.error(
+          'Failed to load console options: ' + JSON.stringify(error)
+        );
+      }
+    );
+  };
 };
 
 const fetchTrackedFunctions = () => {
@@ -611,6 +651,60 @@ const fetchColumnTypeInfo = () => {
   };
 };
 
+// TODO: refactor
+const setConsoleFKOptions = fkDisplayNames => (dispatch, getState) => {
+  const url = Endpoints.getSchema;
+
+  const { hasura_uuid, console_opts } = getState().telemetry;
+
+  let newFkDisplayNames = [];
+  if (!console_opts.fkDisplayNames || !console_opts.fkDisplayNames.length) {
+    newFkDisplayNames = [fkDisplayNames];
+  } else {
+    const currentTableOpts = console_opts.fkDisplayNames.find(
+      opts =>
+        opts.schemaName === fkDisplayNames.schemaName &&
+        opts.tableName === fkDisplayNames.tableName
+    );
+    if (currentTableOpts) {
+      newFkDisplayNames = console_opts.fkDisplayNames.map(opts => {
+        if (
+          opts.schemaName === fkDisplayNames.schemaName &&
+          opts.tableName === fkDisplayNames.tableName
+        ) {
+          return {
+            ...opts,
+            mappings: fkDisplayNames.mappings,
+          };
+        }
+        return opts;
+      });
+    } else {
+      newFkDisplayNames = [...console_opts.fkDisplayNames, fkDisplayNames];
+    }
+  }
+
+  const consoleState = {
+    ...console_opts,
+    fkDisplayNames: newFkDisplayNames,
+  };
+
+  const options = {
+    credentials: globalCookiePolicy,
+    method: 'POST',
+    headers: dataHeaders(getState),
+    body: JSON.stringify(
+      getRunSqlQuery(
+        `update hdb_catalog.hdb_version set console_state = '${JSON.stringify(
+          consoleState
+        )}' where hasura_uuid='${hasura_uuid}';`
+      )
+    ),
+  };
+
+  return dispatch(requestAction(url, options));
+};
+
 /* ******************************************************* */
 const dataReducer = (state = defaultState, action) => {
   // eslint-disable-line no-unused-vars
@@ -741,6 +835,11 @@ const dataReducer = (state = defaultState, action) => {
         columnTypeCasts: { ...defaultState.columnTypeCasts },
         columnDataTypeInfoErr: defaultState.columnDataTypeInfoErr,
       };
+    case SET_HASURA_OPTS:
+      return {
+        ...state,
+        fkMappings: action.data.fkDisplayNames || [],
+      };
     default:
       return state;
   }
@@ -772,4 +871,7 @@ export {
   fetchColumnTypeInfo,
   RESET_COLUMN_TYPE_INFO,
   setUntrackedRelations,
+  setConsoleFKOptions,
+  loadConsoleOpts,
+  SET_HASURA_OPTS,
 };

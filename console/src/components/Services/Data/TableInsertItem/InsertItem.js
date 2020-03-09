@@ -6,7 +6,7 @@ import ReloadEnumValuesButton from '../Common/Components/ReloadEnumValuesButton'
 import { ordinalColSort } from '../utils';
 
 import { insertItem, I_RESET, fetchEnumOptions } from './InsertActions';
-import { setTable } from '../DataActions';
+import { setTable, loadConsoleOpts } from '../DataActions';
 import { NotFoundError } from '../../../Error/PageNotFound';
 import {
   findTable,
@@ -25,6 +25,7 @@ class InsertItem extends Component {
   componentDidMount() {
     this.props.dispatch(setTable(this.props.tableName));
     this.props.dispatch(fetchEnumOptions());
+    this.props.dispatch(loadConsoleOpts());
   }
 
   componentWillUnmount() {
@@ -54,6 +55,7 @@ class InsertItem extends Component {
       count,
       dispatch,
       enumOptions,
+      fkMappings,
     } = this.props;
 
     const currentTable = findTable(
@@ -111,25 +113,36 @@ class InsertItem extends Component {
         }
       };
 
+      const currentTableFkMappings = (fkMappings || []).find(
+        opts =>
+          opts.tableName === tableName && opts.schemaName === currentSchema
+      );
+
+      const handleSearchValueChange = e => {
+        // TODO: fetch results
+        console.log(e.target.value, currentTableFkMappings);
+      };
+
       return (
-        <div key={i} className="form-group">
+        <div key={i} className="form-group" style={{ display: 'flex' }}>
           <label
             className={'col-sm-3 control-label ' + styles.insertBoxLabel}
             title={colName}
           >
             {colName}
           </label>
-          <label className={styles.radioLabel + ' radio-inline'}>
-            <input
-              disabled={isAutoIncrement}
-              type="radio"
-              ref={node => {
-                refs[colName].insertRadioNode = node;
-              }}
-              name={colName + '-value'}
-              value="option1"
-              defaultChecked={!hasDefault & !isNullable}
-            />
+          <input
+            disabled={isAutoIncrement}
+            type="radio"
+            ref={node => {
+              refs[colName].insertRadioNode = node;
+            }}
+            name={colName + '-value'}
+            value="option1"
+            defaultChecked={!hasDefault & !isNullable}
+            style={{ marginTop: '10px' }}
+          />
+          <span style={{ padding: '0 12px', paddingLeft: '8px' }}>
             <TypedInput
               inputRef={node => {
                 refs[colName].valueNode = node;
@@ -140,8 +153,10 @@ class InsertItem extends Component {
               onChange={onChange}
               onFocus={onFocus}
               index={i}
+              searchValue={this.state.searchValue}
+              onSearchValueChange={handleSearchValueChange}
             />
-          </label>
+          </span>
           <label className={styles.radioLabel + ' radio-inline'}>
             <input
               type="radio"
@@ -306,6 +321,7 @@ const mapStateToProps = (state, ownProps) => {
     migrationMode: state.main.migrationMode,
     readOnlyMode: state.main.readOnlyMode,
     currentSchema: state.tables.currentSchema,
+    fkMappings: state.tables.fkMappings,
   };
 };
 

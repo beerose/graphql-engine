@@ -27,6 +27,7 @@ import {
   TOGGLE_ENUM_FAILURE,
   MODIFY_ROOT_FIELD,
   SET_CHECK_CONSTRAINTS,
+  SET_DISPLAY_COLUMN_NAME,
 } from '../TableModify/ModifyActions';
 
 // TABLE RELATIONSHIPS
@@ -629,6 +630,14 @@ const modifyReducer = (tableName, schemas, modifyStateOrig, action) => {
       return {
         ...modifyState,
         checkConstraintsModify: action.constraints,
+      };
+    case SET_DISPLAY_COLUMN_NAME:
+      return {
+        ...modifyState,
+        displayColumnName: {
+          ...modifyState.displayColumnName,
+          [action.data.index]: action.data.columnName,
+        },
       };
     default:
       return modifyState;

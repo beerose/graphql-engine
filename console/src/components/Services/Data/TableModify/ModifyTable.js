@@ -82,6 +82,7 @@ class ModifyTable extends React.Component {
       schemaList,
       tableEnum,
       rootFieldsEdit,
+      displayColumnName,
     } = this.props;
 
     const dataTypeIndexMap = getAllDataTypeMap(dataTypes);
@@ -263,6 +264,7 @@ class ModifyTable extends React.Component {
               schemaList={schemaList}
               dispatch={dispatch}
               fkModify={fkModify}
+              displayColumnName={displayColumnName}
             />
             <hr />
             <h4 className={styles.subheading_text}>Unique Keys</h4>
@@ -335,6 +337,7 @@ const mapStateToProps = (state, ownProps) => ({
   validTypeCasts: state.tables.columnTypeCasts,
   columnDataTypeFetchErr: state.tables.columnDataTypeFetchErr,
   schemaList: state.tables.schemaList,
+  displayColumnName: state.tables.modify.displayColumnName,
   ...state.tables.modify,
 });
 
