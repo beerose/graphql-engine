@@ -6,7 +6,11 @@ import ReloadEnumValuesButton from '../Common/Components/ReloadEnumValuesButton'
 import { ordinalColSort } from '../utils';
 
 import { insertItem, I_RESET, fetchEnumOptions } from './InsertActions';
-import { setTable, loadConsoleOpts } from '../DataActions';
+import {
+  setTable,
+  loadConsoleOpts,
+  getForeignKeyOptions,
+} from '../DataActions';
 import { NotFoundError } from '../../../Error/PageNotFound';
 import {
   findTable,
@@ -25,7 +29,9 @@ class InsertItem extends Component {
   componentDidMount() {
     this.props.dispatch(setTable(this.props.tableName));
     this.props.dispatch(fetchEnumOptions());
-    this.props.dispatch(loadConsoleOpts());
+    this.props
+      .dispatch(loadConsoleOpts())
+      .then(() => this.props.dispatch(getForeignKeyOptions()));
   }
 
   componentWillUnmount() {
@@ -56,7 +62,10 @@ class InsertItem extends Component {
       dispatch,
       enumOptions,
       fkMappings,
+      fkOptions,
     } = this.props;
+
+    console.log({ fkOptions });
 
     const currentTable = findTable(
       schemas,
@@ -323,6 +332,7 @@ const mapStateToProps = (state, ownProps) => {
     readOnlyMode: state.main.readOnlyMode,
     currentSchema: state.tables.currentSchema,
     fkMappings: state.tables.fkMappings,
+    fkOptions: state.tables.fkOptions,
   };
 };
 

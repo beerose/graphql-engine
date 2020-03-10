@@ -64,6 +64,8 @@ const REQUEST_ERROR = 'ModifyTable/REQUEST_ERROR';
 
 const SET_HASURA_OPTS = 'Data/SET_HASURA_OPTS';
 
+const SET_FK_MAPPINGS = 'Data/SET_FK_MAPPINGS';
+
 export const SET_ALL_ROLES = 'Data/SET_ALL_ROLES';
 export const setAllRoles = roles => ({
   type: SET_ALL_ROLES,
@@ -219,11 +221,62 @@ const loadConsoleOpts = () => {
 
     return dispatch(requestAction(url, options)).then(
       data => {
-        console.log({ data });
         if (data.length !== 0) {
           dispatch({
             type: SET_HASURA_OPTS,
             data: data[0].console_state,
+          });
+        }
+      },
+      error => {
+        console.error(
+          'Failed to load console options: ' + JSON.stringify(error)
+        );
+      }
+    );
+  };
+};
+
+const getForeignKeyOptions = () => {
+  return (dispatch, getState) => {
+    const {
+      tables: { fkMappings, currentTable, currentSchema },
+    } = getState();
+    // TODO: change name
+    const currentMappings = fkMappings.find(
+      m => m.tableName === currentTable && m.schemaName === currentSchema
+    );
+    if (!currentMappings || !currentMappings.mappings) return;
+
+    const url = Endpoints.getSchema;
+    const options = {
+      credentials: globalCookiePolicy,
+      method: 'POST',
+      headers: dataHeaders(getState),
+      body: JSON.stringify({
+        // TODO: move to utils
+        type: 'bulk',
+        args: currentMappings.mappings.map(m => ({
+          type: 'select',
+          args: {
+            table: {
+              name: m.refTableName,
+              schema: currentMappings.schemaName,
+            },
+            columns: [m.displayColumnName],
+          },
+        })),
+      }),
+    };
+
+    return dispatch(requestAction(url, options)).then(
+      data => {
+        console.log({ data });
+        if (data.length !== 0) {
+          dispatch({
+            type: SET_FK_MAPPINGS,
+            // TODO: fix me
+            data: data[0].map(d => Object.values(d)[0]),
           });
         }
       },
@@ -879,6 +932,11 @@ const dataReducer = (state = defaultState, action) => {
         ...state,
         allRoles: action.roles,
       };
+    case SET_FK_MAPPINGS:
+      return {
+        ...state,
+        fkOptions: action.data,
+      };
     default:
       return state;
   }
@@ -913,4 +971,5 @@ export {
   setConsoleFKOptions,
   loadConsoleOpts,
   SET_HASURA_OPTS,
+  getForeignKeyOptions,
 };
