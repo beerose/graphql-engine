@@ -125,7 +125,7 @@ class InsertItem extends Component {
       };
 
       return (
-        <div key={i} className="form-group" style={{ display: 'flex' }}>
+        <div key={i} className={`form-group ${styles.displayFlexContainer}`}>
           <label
             className={'col-sm-3 control-label ' + styles.insertBoxLabel}
             title={colName}

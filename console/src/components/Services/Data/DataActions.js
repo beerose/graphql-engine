@@ -37,6 +37,7 @@ import { fetchColumnTypesQuery, fetchColumnDefaultFunctions } from './utils';
 import { fetchColumnCastsQuery, convertArrayToJson } from './TableModify/utils';
 
 import { CLI_CONSOLE_MODE, SERVER_CONSOLE_MODE } from '../../../constants';
+import { equalTableDefs } from '../../Common/utils/pgUtils';
 
 const SET_TABLE = 'Data/SET_TABLE';
 const LOAD_FUNCTIONS = 'Data/LOAD_FUNCTIONS';
@@ -658,7 +659,6 @@ const fetchColumnTypeInfo = () => {
   };
 };
 
-// TODO: refactor
 const setConsoleFKOptions = fkDisplayNames => (dispatch, getState) => {
   const url = Endpoints.getSchema;
 
@@ -668,17 +668,12 @@ const setConsoleFKOptions = fkDisplayNames => (dispatch, getState) => {
   if (!console_opts.fkDisplayNames || !console_opts.fkDisplayNames.length) {
     newFkDisplayNames = [fkDisplayNames];
   } else {
-    const currentTableOpts = console_opts.fkDisplayNames.find(
-      opts =>
-        opts.schemaName === fkDisplayNames.schemaName &&
-        opts.tableName === fkDisplayNames.tableName
+    const currentTableOpts = console_opts.fkDisplayNames.find(opts =>
+      equalTableDefs(opts, fkDisplayNames)
     );
     if (currentTableOpts) {
       newFkDisplayNames = console_opts.fkDisplayNames.map(opts => {
-        if (
-          opts.schemaName === fkDisplayNames.schemaName &&
-          opts.tableName === fkDisplayNames.tableName
-        ) {
+        if (equalTableDefs(opts, fkDisplayNames)) {
           return {
             ...opts,
             mappings: fkDisplayNames.mappings,

@@ -155,20 +155,12 @@ const ForeignKeySelector = ({
       : undefined;
     return (
       <div className={`${styles.add_mar_bottom}`}>
-        <Row
-          className={`${styles.add_mar_bottom_mid}`}
-          style={{ paddingRight: '40px' }} // TODO
-        >
-          {/* TODO: simplify */}
-          <Col sm={4}>
-            <b>From:</b>
-          </Col>
-          <Col sm={4}>
-            <b>To:</b>
-          </Col>
-          <Col sm={4}>
-            <b>Display column:</b>
-          </Col>
+        <Row className={`${styles.add_mar_bottom_mid} ${styles.padd_right_40}`}>
+          {['From', 'To', 'Display column'].map(label => (
+            <Col sm={4} key={label}>
+              <b>{label}:</b>
+            </Col>
+          ))}
         </Row>
         {colMappings.map((colMap, _i) => {
           // from column
@@ -307,8 +299,7 @@ const ForeignKeySelector = ({
                     })}
                 </select>
               </Col>
-              {/* // TODO */}
-              <div style={{ width: '40px' }}>{removeIcon}</div>
+              <div className={styles.width_40}>{removeIcon}</div>
             </div>
           );
         })}
