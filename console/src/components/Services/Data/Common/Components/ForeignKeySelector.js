@@ -5,7 +5,6 @@ import OverlayTrigger from 'react-bootstrap/lib/OverlayTrigger';
 import { updateSchemaInfo } from '../../DataActions';
 import Col from 'react-bootstrap/lib/Col';
 import Row from 'react-bootstrap/lib/Row';
-import { setDisplayColumnName } from '../../TableModify/ModifyActions';
 
 const violiationActions = [
   'restrict',
@@ -25,7 +24,8 @@ const ForeignKeySelector = ({
   service,
   schemaList,
   refTables,
-  displayColumnName,
+  displayColumnNames,
+  setDisplayColumnNames,
 }) => {
   const { refTableName, colMappings, refSchemaName } = foreignKey;
   const numOfFks = foreignKeys.length;
@@ -170,7 +170,7 @@ const ForeignKeySelector = ({
           const rc = colMap.refColumn;
 
           // rel table column display name
-          const displayName = displayColumnName ? displayColumnName[_i] : '';
+          const displayName = displayColumnNames[_i] || '';
 
           // dispatch action for setting column config
           const dispatchSetCols = (key, value) => {
@@ -195,8 +195,12 @@ const ForeignKeySelector = ({
             dispatchSetCols('refColumn', event.target.value);
           };
 
-          const dispatchSetDisplayColumnName = event => {
-            dispatch(setDisplayColumnName(event.target.value, _i));
+          const onDisplayColumnNameChange = event => {
+            // TODO: expose this from outer component?\
+            event.persist();
+            const newColumnNames = [...displayColumnNames];
+            newColumnNames[_i] = event.target.value;
+            setDisplayColumnNames(newColumnNames);
           };
 
           // dispatch action for removing a pair from column mapping
@@ -208,6 +212,7 @@ const ForeignKeySelector = ({
             ];
             newFks[index].colMappings = newColMapping;
             dispatch(setForeignKeys(newFks));
+            setDisplayColumnNames(prev => prev.filter((_, idx) => idx !== _i));
           };
 
           // show remove icon for all column pairs except last
@@ -279,7 +284,7 @@ const ForeignKeySelector = ({
                 <select
                   className={`form-control ${styles.select} ${styles.wd100Percent}`}
                   value={displayName}
-                  onChange={dispatchSetDisplayColumnName}
+                  onChange={onDisplayColumnNameChange}
                   disabled={!refTableName}
                   title={'' /** TO DO */}
                   data-test={`foreign-key-${index}-rcol-${_i}`}

@@ -111,16 +111,6 @@ const setCheckConstraints = constraints => ({
 });
 
 const SET_DISPLAY_COLUMN_NAME = 'ModifyTable/SET_DISPLAY_COLUMN_NAME';
-const REMOVE_DISPLAY_COLUMN_NAME = 'ModifyTable/REMOVE_DISPLAY_COLUMN_NAME';
-
-const setDisplayColumnName = (columnName, index) => ({
-  type: SET_DISPLAY_COLUMN_NAME,
-  data: { columnName, index },
-});
-const removeDisplayColumnName = index => ({
-  type: REMOVE_DISPLAY_COLUMN_NAME,
-  data: { index },
-});
 
 const RESET = 'ModifyTable/RESET';
 
@@ -522,7 +512,7 @@ const savePrimaryKeys = (tableName, schemaName, constraintName) => {
   };
 };
 
-const saveForeignKeys = (index, tableSchema, columns) => {
+const saveForeignKeys = (index, tableSchema, columns, displayColumnNames) => {
   return (dispatch, getState) => {
     dispatch({ type: REMOVE_FOREIGN_KEY });
     const fk = getState().tables.modify.fkModify[index];
@@ -536,7 +526,6 @@ const saveForeignKeys = (index, tableSchema, columns) => {
       onDelete,
       constraintName,
     } = fk;
-    const displayNameMappings = getState().tables.modify.displayColumnName;
     const mappingObj = {};
     const filteredMappings = [];
     const displayColumnsMappings = [];
@@ -558,9 +547,9 @@ const saveForeignKeys = (index, tableSchema, columns) => {
       }
 
       // TODO: simplify
-      if (displayNameMappings && displayNameMappings[_i]) {
+      if (displayColumnNames && displayColumnNames[_i]) {
         displayColumnsMappings.push({
-          displayColumnName: displayNameMappings[_i] || cm.refColumn,
+          displayColumnName: displayColumnNames[_i] || cm.refColumn,
           refColumnName: cm.refColumn,
           columnName: columns[cm.column].name,
           refTableName,
@@ -639,7 +628,14 @@ const saveForeignKeys = (index, tableSchema, columns) => {
     const successMsg = 'Foreign key saved';
     const errorMsg = 'Failed setting foreign key';
 
+    const fkDisplayOpts = {
+      tableName,
+      schemaName,
+      mappings: displayColumnsMappings,
+    };
+
     const customOnSuccess = () => {
+      dispatch(setConsoleFKOptions(fkDisplayOpts));
       if (!constraintName) {
         const newFks = [...getState().tables.modify.fkModify];
         newFks[index].constraintName = generatedConstraintName;
@@ -667,14 +663,6 @@ const saveForeignKeys = (index, tableSchema, columns) => {
     const customOnError = err => {
       dispatch({ type: UPDATE_MIGRATION_STATUS_ERROR, data: err });
     };
-
-    const fkDisplayOpts = {
-      tableName,
-      schemaName,
-      mappings: displayColumnsMappings,
-    };
-
-    dispatch(setConsoleFKOptions(fkDisplayOpts));
 
     makeMigrationCall(
       dispatch,
@@ -2375,7 +2363,6 @@ export {
   MODIFY_ROOT_FIELD,
   SET_CHECK_CONSTRAINTS,
   SET_DISPLAY_COLUMN_NAME,
-  REMOVE_DISPLAY_COLUMN_NAME,
   changeTableName,
   fetchViewDefinition,
   handleMigrationErrors,
@@ -2410,6 +2397,4 @@ export {
   toggleEnumFailure,
   modifyRootFields,
   setCheckConstraints,
-  setDisplayColumnName,
-  removeDisplayColumnName,
 };

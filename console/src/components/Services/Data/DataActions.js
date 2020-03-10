@@ -715,6 +715,7 @@ const fetchColumnTypeInfo = () => {
 const setConsoleFKOptions = fkDisplayNames => (dispatch, getState) => {
   const url = Endpoints.getSchema;
 
+  // TODO: don't use telemetry
   const { hasura_uuid, console_opts } = getState().telemetry;
 
   let newFkDisplayNames = [];
@@ -925,7 +926,7 @@ const dataReducer = (state = defaultState, action) => {
     case SET_HASURA_OPTS:
       return {
         ...state,
-        fkMappings: action.data.fkDisplayNames || [],
+        consoleOpts: action.data,
       };
     case SET_ALL_ROLES:
       return {

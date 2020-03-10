@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ordinalColSort } from '../utils';
 import {
   setForeignKeys,
@@ -21,8 +21,40 @@ const ForeignKeyEditor = ({
   dispatch,
   fkModify,
   schemaList,
-  displayColumnName,
+  consoleOpts,
 }) => {
+  const [displayColumnNames, setDisplayColumnNames] = useState([]);
+  useEffect(() => {
+    if (!consoleOpts || !consoleOpts.fkDisplayNames) return;
+    const currentTableMappings = consoleOpts.fkDisplayNames.find(
+      m =>
+        m.tableName === tableSchema.table_name &&
+        m.schemaName === tableSchema.table_schema
+    );
+
+    // TODO: explain why I'm doing this
+    const sortedDisplayColumnNames = [];
+    if (fkModify && fkModify.length > 0) {
+      fkModify.forEach(fk => {
+        fk.colMappings.forEach(colMapping => {
+          const newDN = currentTableMappings.mappings.find(
+            m =>
+              // m.columnName === colMapping.column && why there is number
+              m.refColumnName === colMapping.refColumn &&
+              m.refTableName === fk.refTableName
+          );
+          if (newDN) {
+            sortedDisplayColumnNames.push(newDN.displayColumnName);
+          }
+        });
+      });
+    }
+
+    console.log({ sortedDisplayColumnNames });
+
+    setDisplayColumnNames(sortedDisplayColumnNames);
+  }, [consoleOpts]);
+
   const columns = tableSchema.columns.sort(ordinalColSort);
 
   // columns in the right order with their indices
@@ -105,7 +137,8 @@ const ForeignKeyEditor = ({
         orderedColumns={orderedColumns}
         dispatch={dispatch}
         setForeignKeys={setForeignKeys}
-        displayColumnName={displayColumnName}
+        displayColumnNames={displayColumnNames}
+        setDisplayColumnNames={setDisplayColumnNames}
       />
     );
 
@@ -153,7 +186,9 @@ const ForeignKeyEditor = ({
     let saveFk;
     if (fkConfig) {
       saveFk = () => {
-        dispatch(saveForeignKeys(i, tableSchema, orderedColumns));
+        dispatch(
+          saveForeignKeys(i, tableSchema, orderedColumns, displayColumnNames)
+        );
       };
     }
 

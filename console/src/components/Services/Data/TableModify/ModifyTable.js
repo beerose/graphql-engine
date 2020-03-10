@@ -16,6 +16,7 @@ import {
   fetchColumnTypeInfo,
   RESET_COLUMN_TYPE_INFO,
   fetchFunctionInit,
+  loadConsoleOpts,
 } from '../DataActions';
 import Button from '../../../Common/Button/Button';
 import ColumnEditorList from './ColumnEditorList';
@@ -52,6 +53,7 @@ class ModifyTable extends React.Component {
     dispatch(setTable(this.props.tableName));
     dispatch(fetchColumnTypeInfo());
     dispatch(fetchFunctionInit());
+    dispatch(loadConsoleOpts());
   }
 
   componentWillUnmount() {
@@ -82,8 +84,10 @@ class ModifyTable extends React.Component {
       schemaList,
       tableEnum,
       rootFieldsEdit,
-      displayColumnName,
+      consoleOpts,
     } = this.props;
+
+    console.log({ consoleOpts });
 
     const dataTypeIndexMap = getAllDataTypeMap(dataTypes);
 
@@ -264,7 +268,7 @@ class ModifyTable extends React.Component {
               schemaList={schemaList}
               dispatch={dispatch}
               fkModify={fkModify}
-              displayColumnName={displayColumnName}
+              consoleOpts={consoleOpts}
             />
             <hr />
             <h4 className={styles.subheading_text}>Unique Keys</h4>
@@ -337,7 +341,7 @@ const mapStateToProps = (state, ownProps) => ({
   validTypeCasts: state.tables.columnTypeCasts,
   columnDataTypeFetchErr: state.tables.columnDataTypeFetchErr,
   schemaList: state.tables.schemaList,
-  displayColumnName: state.tables.modify.displayColumnName,
+  consoleOpts: state.tables.consoleOpts,
   ...state.tables.modify,
 });
 
