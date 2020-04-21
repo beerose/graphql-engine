@@ -56,9 +56,7 @@ const routes = store => {
           } else {
             dispatch(
               showErrorNotification(
-                'Connection error',
-                'Hasura console is not able to reach your Hasura GraphQL engine instance. Please ensure that your ' +
-                  'instance is running and the endpoint is configured correctly.'
+                'Connection error', 'Hasura console is not able to reach your Hasura GraphQL engine instance. Please ensure that your ' + 'instance is running and the endpoint is configured correctly.'
               )
             );
           }
