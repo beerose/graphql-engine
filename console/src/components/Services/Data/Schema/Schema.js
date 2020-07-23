@@ -88,6 +88,8 @@ const ClosedCreateSection = ({ onClick }) => (
   </Button>
 );
 
+console.log('hello');
+
 const CreateSchemaSection = React.forwardRef(
   ({
     ref,
