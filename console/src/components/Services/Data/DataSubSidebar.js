@@ -65,7 +65,6 @@ class DataSubSidebar extends React.Component {
       t.table_name.includes(searchInput)
     );
 
-    console.log({ trackedFunctions });
     const filteredFunctionsList = trackedFunctions.filter(f =>
       f.name.includes(searchInput)
     );
