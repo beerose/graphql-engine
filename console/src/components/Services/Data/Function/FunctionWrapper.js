@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { RESET } from './customFunctionReducer';
 
 import { setTable } from '../DataActions';
+import { getFunctionConfiguration } from '../../../../metadata/selector';
 
 class FunctionWrapper extends React.Component {
   componentDidMount() {
@@ -29,6 +30,7 @@ const mapStateToProps = state => {
     functionList: state.tables.postgresFunctions,
     functions: {
       ...state.functions,
+      configuration: getFunctionConfiguration(state),
     },
     migrationMode: state.main.migrationMode,
   };

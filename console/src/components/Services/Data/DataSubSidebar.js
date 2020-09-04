@@ -4,20 +4,14 @@ import { Link } from 'react-router';
 
 import LeftSubSidebar from '../../Common/Layout/LeftSubSidebar/LeftSubSidebar';
 import GqlCompatibilityWarning from '../../Common/GqlCompatibilityWarning/GqlCompatibilityWarning';
-import {
-  displayTableName,
-  getFunctionName,
-  getSchemaTables,
-  getTableName,
-  checkIfTable,
-  getFunctionSchema,
-} from '../../Common/utils/pgUtils';
+import { dataSource, getSchemaTables } from '../../../dataSources';
 import { isEmpty } from '../../Common/utils/jsUtils';
 import {
   getFunctionModifyRoute,
   getSchemaAddTableRoute,
   getTableBrowseRoute,
 } from '../../Common/utils/routesUtils';
+import { getConsistentFunctions } from '../../../metadata/selector';
 
 class DataSubSidebar extends React.Component {
   constructor() {
@@ -68,11 +62,11 @@ class DataSubSidebar extends React.Component {
     ).filter(table => table.is_table_tracked);
 
     const filteredTableList = trackedTablesInSchema.filter(t =>
-      getTableName(t).includes(searchInput)
+      t.table_name.includes(searchInput)
     );
 
     const filteredFunctionsList = trackedFunctions.filter(f =>
-      getFunctionName(f).includes(searchInput)
+      f.name.includes(searchInput)
     );
 
     const getSearchInput = () => {
@@ -96,7 +90,7 @@ class DataSubSidebar extends React.Component {
       if (filteredTableList && filteredTableList.length) {
         const filteredTablesObject = {};
         filteredTableList.forEach(t => {
-          filteredTablesObject[getTableName(t)] = t;
+          filteredTablesObject[t.table_name] = t;
         });
 
         const sortedTableNames = Object.keys(filteredTablesObject).sort();
@@ -118,7 +112,7 @@ class DataSubSidebar extends React.Component {
                 to={getTableBrowseRoute(
                   currentSchema,
                   tableName,
-                  checkIfTable(table)
+                  dataSource.isTable(table)
                 )}
                 data-test={tableName}
               >
@@ -126,7 +120,7 @@ class DataSubSidebar extends React.Component {
                   className={`${styles.tableIcon} fa ${iconStyle}`}
                   aria-hidden="true"
                 />
-                {displayTableName(table)}
+                {dataSource.displayTableName(table)}
               </Link>
               <GqlCompatibilityWarning
                 identifier={tableName}
@@ -141,7 +135,7 @@ class DataSubSidebar extends React.Component {
       if (filteredFunctionsList && filteredFunctionsList.length > 0) {
         const filteredFunctionsObject = {};
         filteredFunctionsList.forEach(f => {
-          filteredFunctionsObject[getFunctionName(f)] = f;
+          filteredFunctionsObject[f.name] = f;
         });
 
         const sortedFunctionNames = Object.keys(filteredFunctionsObject).sort();
@@ -155,7 +149,10 @@ class DataSubSidebar extends React.Component {
           return (
             <li className={isActive ? styles.activeLink : ''} key={'fn ' + i}>
               <Link
-                to={getFunctionModifyRoute(getFunctionSchema(func), funcName)}
+                to={getFunctionModifyRoute(
+                  dataSource.getFunctionSchema(func),
+                  funcName
+                )}
                 data-test={funcName}
               >
                 <img
@@ -204,7 +201,7 @@ class DataSubSidebar extends React.Component {
 const mapStateToProps = state => {
   return {
     migrationMode: state.main.migrationMode,
-    trackedFunctions: state.tables.trackedFunctions,
+    trackedFunctions: getConsistentFunctions(state),
     currentFunction: state.functions.functionName,
     allSchemas: state.tables.allSchemas,
     currentTable: state.tables.currentTable,

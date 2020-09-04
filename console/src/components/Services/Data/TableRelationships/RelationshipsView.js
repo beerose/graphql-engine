@@ -1,16 +1,16 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import TableHeader from '../TableCommon/TableHeader';
-import { findAllFromRel } from '../utils';
 import { getObjArrRelList } from './utils';
 import { setTable, UPDATE_REMOTE_SCHEMA_MANUAL_REL } from '../DataActions';
 import AddManualRelationship from './AddManualRelationship';
 import RelationshipEditor from './RelationshipEditor';
 import { NotFoundError } from '../../../Error/PageNotFound';
 import RemoteRelationships from './RemoteRelationships/RemoteRelationships';
-import { fetchRemoteSchemas } from '../../RemoteSchema/Actions';
 import ToolTip from '../../../Common/Tooltip/Tooltip';
 import KnowMoreLink from '../../../Common/KnowMoreLink/KnowMoreLink';
+import { findAllFromRel } from '../../../../dataSources';
+import { getRemoteSchemasSelector } from '../../../../metadata/selector';
 
 class RelationshipsView extends Component {
   componentDidMount() {
@@ -21,7 +21,6 @@ class RelationshipsView extends Component {
       type: UPDATE_REMOTE_SCHEMA_MANUAL_REL,
       data: currentSchema,
     });
-    dispatch(fetchRemoteSchemas());
   }
 
   render() {
@@ -102,11 +101,7 @@ class RelationshipsView extends Component {
                   <RelationshipEditor
                     dispatch={dispatch}
                     key={rel.objRel.rel_name}
-                    relConfig={findAllFromRel(
-                      allSchemas,
-                      tableSchema,
-                      rel.objRel
-                    )}
+                    relConfig={findAllFromRel(tableSchema, rel.objRel)}
                   />
                 ) : (
                   <td />
@@ -115,11 +110,7 @@ class RelationshipsView extends Component {
                   <RelationshipEditor
                     key={rel.arrRel.rel_name}
                     dispatch={dispatch}
-                    relConfig={findAllFromRel(
-                      allSchemas,
-                      tableSchema,
-                      rel.arrRel
-                    )}
+                    relConfig={findAllFromRel(tableSchema, rel.arrRel)}
                   />
                 ) : (
                   <td />
@@ -215,7 +206,7 @@ const mapStateToProps = (state, ownProps) => ({
   readOnlyMode: state.main.readOnlyMode,
   serverVersion: state.main.serverVersion,
   schemaList: state.tables.schemaList,
-  remoteSchemas: state.remoteSchemas.listData.remoteSchemas.map(r => r.name),
+  remoteSchemas: getRemoteSchemasSelector(state).map(schema => schema.name),
   ...state.tables.modify,
 });
 

@@ -7,12 +7,8 @@ import {
   showSuccessNotification,
 } from '../../Common/Notification';
 import dataHeaders from '../Common/Headers';
-import {
-  getEnumColumnMappings,
-  arrayToPostgresArray,
-} from '../../../Common/utils/pgUtils';
+import { getEnumColumnMappings, dataSource } from '../../../../dataSources';
 import { getEnumOptionsQuery } from '../../../Common/utils/v1QueryUtils';
-import { ARRAY } from '../utils';
 import { isStringArray } from '../../../Common/utils/jsUtils';
 
 const I_SET_CLONE = 'InsertItem/I_SET_CLONE';
@@ -47,7 +43,7 @@ const insertItem = (tableName, colValues) => {
       if (Reals.indexOf(colType) > 0) {
         insertObject[colName] =
           parseFloat(colValues[colName], 10) || colValues[colName];
-      } else if (colType === 'boolean') {
+      } else if (colType === dataSource.columnDataTypes.BOOLEAN) {
         if (colValues[colName] === 'true') {
           insertObject[colName] = true;
         } else if (colValues[colName] === 'false') {
@@ -55,7 +51,10 @@ const insertItem = (tableName, colValues) => {
         } else {
           insertObject[colName] = null;
         }
-      } else if (colType === 'json' || colType === 'jsonb') {
+      } else if (
+        colType === dataSource.columnDataTypes.JSONDTYPE ||
+        colType === dataSource.columnDataTypes.JSONB
+      ) {
         try {
           const val = JSON.parse(colValues[colName]);
           insertObject[colName] = val;
@@ -67,10 +66,13 @@ const insertItem = (tableName, colValues) => {
             ' as a valid JSON object/array';
           error = true;
         }
-      } else if (colType === ARRAY && isStringArray(colValues[colName])) {
+      } else if (
+        colType === dataSource.columnDataTypes.ARRAY &&
+        isStringArray(colValues[colName])
+      ) {
         try {
           const arr = JSON.parse(colValues[colName]);
-          insertObject[colName] = arrayToPostgresArray(arr);
+          insertObject[colName] = dataSource.arrayToPostgresArray(arr);
         } catch {
           errorMessage =
             colName +

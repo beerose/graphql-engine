@@ -44,10 +44,8 @@ import {
 import {
   findTable,
   getRelationshipRefTable,
-  getTableName,
-  getTableSchema,
-  arrayToPostgresArray,
-} from '../../../Common/utils/pgUtils';
+  dataSource,
+} from '../../../../dataSources';
 import { updateSchemaInfo } from '../DataActions';
 import {
   persistColumnCollapseChange,
@@ -239,7 +237,7 @@ const ViewRows = ({
 
     Object.keys(pkClause).forEach(key => {
       if (Array.isArray(pkClause[key])) {
-        pkClause[key] = arrayToPostgresArray(pkClause[key]);
+        pkClause[key] = dataSource.arrayToPostgresArray(pkClause[key]);
       }
     });
 
@@ -769,8 +767,8 @@ const ViewRows = ({
           return (
             <ViewRows
               key={i}
-              curTableName={getTableName(childTable)}
-              currentSchema={getTableSchema(childTable)}
+              curTableName={childTable.table_name}
+              currentSchema={childTable.table_schema}
               curQuery={cq}
               curFilter={curFilter}
               curPath={[...curPath, rel.rel_name]}

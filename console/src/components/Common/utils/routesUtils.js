@@ -1,4 +1,5 @@
-// import globals from '../../../Globals';
+import { push } from 'react-router-redux';
+import globals from '../../../Globals';
 
 /*** DATA ROUTES ***/
 
@@ -14,6 +15,8 @@ export const getSchemaAddTableRoute = schemaName => {
 export const getSchemaPermissionsRoute = schemaName => {
   return `${getSchemaBaseRoute(schemaName)}/permissions`;
 };
+
+export const manageDatabasesRoute = '/data/manage';
 
 const getTableBaseRoute = (schemaName, tableName, isTable) => {
   return `${getSchemaBaseRoute(schemaName)}/${
@@ -155,4 +158,12 @@ export const getAdhocProcessedEventsRoute = type => {
 };
 export const getAdhocEventsInfoRoute = type => {
   return getAdhocEventsRoute(type, 'info');
+};
+
+export const redirectToMetadataStatus = () => {
+  return dispatch => {
+    return dispatch(
+      push(globals.urlPrefix + '/settings/metadata-status?is_redirected=true')
+    );
+  };
 };

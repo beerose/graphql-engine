@@ -44,12 +44,7 @@ import TableHeader from '../TableCommon/TableHeader';
 import CollapsibleToggle from '../../../Common/CollapsibleToggle/CollapsibleToggle';
 import Toggle from '../../../Common/Toggle/Toggle';
 import EnhancedInput from '../../../Common/InputChecker/InputChecker';
-import {
-  fetchFunctionInit,
-  setTable,
-  updateSchemaInfo,
-  fetchRoleList,
-} from '../DataActions';
+import { fetchFunctionInit, setTable, updateSchemaInfo } from '../DataActions';
 import { getIngForm, getEdForm } from '../utils';
 import {
   getPermissionFilterString,
@@ -72,14 +67,9 @@ import {
 import {
   findTable,
   generateTableDef,
-  getColumnName,
-  getComputedFieldName,
-  getTableColumns,
-  getGroupedTableComputedFields,
-  getColumnType,
-  getTableSupportedQueries,
   QUERY_TYPES,
-} from '../../../Common/utils/pgUtils';
+  dataSource,
+} from '../../../../dataSources';
 import KnowMoreLink from '../../../Common/KnowMoreLink/KnowMoreLink';
 import {
   getFilterQueries,
@@ -90,6 +80,7 @@ import {
   getQuerySingleRowMutation,
 } from './utils';
 import PermButtonSection from './PermButtonsSection';
+import { rolesSelector } from '../../../../metadata/selector';
 
 class Permissions extends Component {
   constructor() {
@@ -118,7 +109,6 @@ class Permissions extends Component {
 
     dispatch({ type: RESET });
     dispatch(setTable(this.props.tableName));
-    dispatch(fetchRoleList());
     dispatch(fetchFunctionInit());
   }
 
@@ -212,7 +202,7 @@ class Permissions extends Component {
     }
 
     const allFunctions = nonTrackableFunctions.concat(trackableFunctions);
-    const groupedComputedFields = getGroupedTableComputedFields(
+    const groupedComputedFields = dataSource.getGroupedTableComputedFields(
       currentTableSchema,
       allFunctions
     );
@@ -1003,9 +993,7 @@ class Permissions extends Component {
 
           if (query === 'select') {
             groupedComputedFields.scalar.forEach(scalarComputedField => {
-              const computedFieldName = getComputedFieldName(
-                scalarComputedField
-              );
+              const computedFieldName = scalarComputedField.computed_field_name;
 
               _columnList.push(
                 getFieldCheckbox('computed_fields', computedFieldName)
@@ -1048,13 +1036,13 @@ class Permissions extends Component {
           const dispatchToggleAllColumns = () => {
             const allFields = {};
 
-            allFields.columns = getTableColumns(tableSchema).map(c =>
-              getColumnName(c)
+            allFields.columns = (tableSchema.columns || []).map(
+              c => c.column_name
             );
 
             if (query === 'select') {
-              allFields.computed_fields = groupedComputedFields.scalar.map(cf =>
-                getComputedFieldName(cf)
+              allFields.computed_fields = groupedComputedFields.scalar.map(
+                cf => cf.computed_field_name
               );
             }
 
@@ -1100,7 +1088,7 @@ class Permissions extends Component {
           const colSectionTitle = 'Column ' + query + ' permissions';
 
           const tableFields = {};
-          tableFields.columns = getTableColumns(tableSchema);
+          tableFields.columns = tableSchema.columns || [];
           if (query === 'select') {
             tableFields.computed_fields = groupedComputedFields.scalar;
           }
@@ -1319,7 +1307,7 @@ class Permissions extends Component {
 
               if (columns && columns.length > 0) {
                 columns.forEach((c, i) => {
-                  const columnName = getColumnName(c);
+                  const columnName = c.column_name;
                   if (
                     columnName === preset.column ||
                     !presetColumns.includes(columnName)
@@ -1384,9 +1372,11 @@ class Permissions extends Component {
             const presetInputDisabled = !preset.column;
 
             const columnInfo = columns.find(
-              c => getColumnName(c) === preset.column
+              c => c.column_name === preset.column
             );
-            const columnType = columnInfo ? getColumnType(columnInfo) : '';
+            const columnType = columnInfo
+              ? dataSource.getColumnType(columnInfo)
+              : '';
 
             if (presetType === 'session') {
               _presetInput = (
@@ -1835,7 +1825,9 @@ class Permissions extends Component {
 
     /********************/
 
-    const supportedQueryTypes = getTableSupportedQueries(currentTableSchema);
+    const supportedQueryTypes = dataSource.getTableSupportedQueries(
+      currentTableSchema
+    );
 
     return (
       <div className={styles.container}>
@@ -1882,7 +1874,7 @@ const mapStateToProps = (state, ownProps) => ({
   tableName: ownProps.params.table,
   tableType: ownProps.route.tableType,
   allSchemas: state.tables.allSchemas,
-  allRoles: state.tables.allRoles,
+  allRoles: rolesSelector(state),
   schemaList: state.tables.schemaList,
   migrationMode: state.main.migrationMode,
   nonTrackableFunctions: state.tables.nonTrackablePostgresFunctions || [],

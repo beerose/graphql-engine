@@ -8,9 +8,10 @@ import { ordinalColSort } from '../utils';
 import { insertItem, I_RESET, fetchEnumOptions } from './InsertActions';
 import { setTable } from '../DataActions';
 import { NotFoundError } from '../../../Error/PageNotFound';
-import { findTable, generateTableDef } from '../../../Common/utils/pgUtils';
+import { findTable } from '../../../../dataSources';
 import styles from '../../../Common/TableCommon/Table.scss';
 import { TableRow } from '../Common/Components/TableRow';
+import { generateTableDef } from '../../../../dataSources';
 
 class InsertItem extends Component {
   constructor() {
@@ -69,9 +70,12 @@ class InsertItem extends Component {
     const refs = {};
 
     const elements = columns.map((col, i) => {
-      const { column_name: colName, is_identity, column_default } = col;
+      const {
+        column_name: colName,
+        is_identity: isIdentity,
+        column_default,
+      } = col;
       const hasDefault = column_default && column_default.trim() !== '';
-      const isIdentity = is_identity && is_identity !== 'NO';
 
       refs[colName] = {
         valueNode: null,

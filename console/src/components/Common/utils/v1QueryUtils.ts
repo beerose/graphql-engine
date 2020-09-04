@@ -1,11 +1,10 @@
-import { terminateSql } from './sqlUtils';
 import { LocalScheduledTriggerState } from '../../Services/Events/CronTriggers/state';
 import { LocalAdhocEventState } from '../../Services/Events/AdhocEvents/Add/state';
 import { LocalEventTriggerState } from '../../Services/Events/EventTriggers/state';
 import { RemoteRelationshipPayload } from '../../Services/Data/TableRelationships/RemoteRelationships/utils';
 import { transformHeaders } from '../Headers/utils';
-import { generateTableDef } from './pgUtils';
 import { Nullable } from './tsUtils';
+import { generateTableDef, terminateSql } from '../../../dataSources';
 
 // TODO add type for the where clause
 
@@ -182,33 +181,6 @@ export const generateDropActionQuery = (name: string) => {
   };
 };
 
-export const getFetchActionsQuery = () => {
-  return {
-    type: 'select',
-    args: {
-      table: {
-        name: 'hdb_action',
-        schema: 'hdb_catalog',
-      },
-      columns: ['*.*'],
-      order_by: [{ column: 'action_name', type: 'asc' }],
-    },
-  };
-};
-
-export const getFetchCustomTypesQuery = () => {
-  return {
-    type: 'select',
-    args: {
-      table: {
-        name: 'hdb_custom_types',
-        schema: 'hdb_catalog',
-      },
-      columns: ['*.*'],
-    },
-  };
-};
-
 type CustomRootFields = {
   select: string;
   select_by_pk: string;
@@ -237,18 +209,6 @@ export const getSetCustomRootFieldsQuery = (
     },
   };
 };
-
-export const getFetchAllRolesQuery = () => ({
-  type: 'select',
-  args: {
-    table: {
-      schema: 'hdb_catalog',
-      name: 'hdb_role',
-    },
-    columns: ['role_name'],
-    order_by: [{ column: 'role_name', type: 'asc' }],
-  },
-});
 
 // TODO Refactor and accept role, filter and action name
 export const getCreateActionPermissionQuery = (

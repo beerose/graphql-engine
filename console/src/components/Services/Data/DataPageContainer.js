@@ -11,6 +11,7 @@ import { updateCurrentSchema } from './DataActions';
 import { NotFoundError } from '../../Error/PageNotFound';
 import { CLI_CONSOLE_MODE } from '../../../constants';
 import { getSchemaBaseRoute } from '../../Common/utils/routesUtils';
+import styles from '../../Common/TableCommon/Table.scss';
 
 const DataPageContainer = ({
   currentSchema,
@@ -19,8 +20,6 @@ const DataPageContainer = ({
   location,
   dispatch,
 }) => {
-  const styles = require('../../Common/TableCommon/Table.scss');
-
   if (!schemaList.map(s => s.schema_name).includes(currentSchema)) {
     dispatch(updateCurrentSchema('public', false));
 
@@ -69,8 +68,23 @@ const DataPageContainer = ({
           to={getSchemaBaseRoute(currentSchema)}
         >
           <div className={styles.schemaWrapper}>
+            <div
+              className={styles.schemaSidebarSection}
+              style={{
+                marginBottom: '20px',
+              }}
+            >
+              <label style={{ width: '70px' }}>Database:</label>
+              <select
+                onChange={null /** todo */}
+                value={null /** todo */}
+                className={styles.changeSchema + ' form-control'}
+              >
+                {/** TODO: options */}
+              </select>
+            </div>
             <div className={styles.schemaSidebarSection} data-test="schema">
-              Schema:
+              <label style={{ width: '70px' }}>Schema:</label>
               <select
                 onChange={handleSchemaChange}
                 value={currentSchema}

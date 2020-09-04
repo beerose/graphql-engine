@@ -11,15 +11,12 @@ import { getTablePermissionsRoute } from '../../../Common/utils/routesUtils';
 import { permissionsSymbols } from '../../../Common/Permissions/PermissionSymbols';
 import {
   findTable,
-  getTableSchema,
-  getTableName,
-  displayTableName,
   getTableNameWithSchema,
   getTableDef,
   getSchemaTables,
   getTrackedTables,
-  checkIfTable,
-} from '../../../Common/utils/pgUtils';
+  dataSource,
+} from '../../../../dataSources';
 import { getConfirmation } from '../../../Common/utils/jsUtils';
 
 import { updateSchemaInfo } from '../DataActions';
@@ -83,6 +80,7 @@ class PermissionsSummary extends Component {
 
     const allActions = ['select', 'insert', 'update', 'delete'];
 
+    // todo ?
     let allRoles = getAllRoles(allSchemas);
 
     // add newly added roles
@@ -194,9 +192,9 @@ class PermissionsSummary extends Component {
         dispatch(
           push(
             getTablePermissionsRoute(
-              getTableSchema(table),
-              getTableName(table),
-              checkIfTable(table)
+              table.table_schema,
+              table.table_name,
+              dataSource.isTable(table)
             )
           )
         );
@@ -313,8 +311,8 @@ class PermissionsSummary extends Component {
         );
       } else {
         currSchemaTrackedTables.forEach((table, i) => {
-          const tableName = getTableName(table);
-          const tableSchema = getTableSchema(table);
+          const tableName = table.table_name;
+          const tableSchema = table.table_schema;
 
           const isCurrTable =
             currTable &&
@@ -330,7 +328,7 @@ class PermissionsSummary extends Component {
 
             return (
               <Header
-                content={displayTableName(table)}
+                content={dataSource.displayTableName(table)}
                 selectable={selectable}
                 isSelected={isCurrTable}
                 onClick={setTable}
@@ -751,7 +749,7 @@ class PermissionsSummary extends Component {
 
       const getFromTableOptions = () => {
         return currSchemaTrackedTables.map(table => {
-          const tableName = getTableName(table);
+          const tableName = table.table_name;
           const tableValue = getTableNameWithSchema(getTableDef(table));
 
           return (

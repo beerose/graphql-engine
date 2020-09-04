@@ -10,7 +10,7 @@ import {
   editColumn,
   isColumnUnique,
 } from '../TableModify/ModifyActions';
-import { ordinalColSort, ARRAY } from '../utils';
+import { ordinalColSort } from '../utils';
 import { defaultDataTypeToCast } from '../constants';
 
 import {
@@ -22,6 +22,7 @@ import GqlCompatibilityWarning from '../../../Common/GqlCompatibilityWarning/Gql
 
 import styles from './ModifyTable.scss';
 import { getConfirmation } from '../../../Common/utils/jsUtils';
+import { dataSource } from '../../../../dataSources';
 
 const ColumnEditorList = ({
   tableSchema,
@@ -59,8 +60,9 @@ const ColumnEditorList = ({
    * */
   return columns.map((col, i) => {
     const colName = col.column_name;
-    const isArrayDataType = col.data_type === ARRAY;
+    const isArrayDataType = col.data_type === dataSource.columnDataTypes.ARRAY;
 
+    // todo -- getColumnProperties utility
     const getDisplayName = () => {
       if (isArrayDataType) {
         return col.udt_name.replace('_', '') + '[]';
@@ -81,10 +83,9 @@ const ColumnEditorList = ({
       type: getType(),
       isArrayDataType,
       isNullable: col.is_nullable === 'YES',
-      isIdentity: col.is_identity === 'YES',
+      isIdentity: col.is_identity,
       pkConstraint: columnPKConstraints[colName],
       isUnique: isColumnUnique(tableSchema, colName),
-      // uniqueConstraint: columnUniqueConstraints[colName],
       default: col.column_default || '',
       comment: col.comment || '',
       customFieldName: customColumnNames[colName] || '',

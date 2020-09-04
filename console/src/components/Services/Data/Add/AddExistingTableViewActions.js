@@ -1,10 +1,6 @@
 import defaultState from './AddExistingTableViewState';
 import _push from '../push';
-import {
-  updateSchemaInfo,
-  fetchTrackedFunctions,
-  makeMigrationCall,
-} from '../DataActions';
+import { updateSchemaInfo, makeMigrationCall } from '../DataActions';
 import { showSuccessNotification } from '../../Common/Notification';
 import {
   getSchemaBaseRoute,
@@ -12,7 +8,8 @@ import {
   getTableModifyRoute,
   getFunctionModifyRoute,
 } from '../../../Common/utils/routesUtils';
-import { checkIfTable } from '../../../Common/utils/pgUtils';
+import { dataSource } from '../../../../dataSources';
+import { exportMetadata } from '../../../../metadata/actions';
 
 const SET_DEFAULTS = 'AddExistingTable/SET_DEFAULTS';
 const SET_TABLENAME = 'AddExistingTable/SET_TABLENAME';
@@ -67,10 +64,10 @@ const addExistingTableSql = () => {
         const newTable = getState().tables.allSchemas.find(
           t => t.table_name === tableName && t.table_schema === currentSchema
         );
-        const isTable = checkIfTable(newTable);
-        const nextRoute = isTable
-          ? getTableModifyRoute(currentSchema, tableName, isTable)
-          : getTableBrowseRoute(currentSchema, tableName, isTable);
+        const isTableType = dataSource.isTable(newTable);
+        const nextRoute = isTableType
+          ? getTableModifyRoute(currentSchema, tableName, isTableType)
+          : getTableBrowseRoute(currentSchema, tableName, isTableType);
         dispatch(_push(nextRoute));
       });
       return;
@@ -130,7 +127,7 @@ const addExistingFunction = name => {
     const customOnSuccess = () => {
       dispatch({ type: REQUEST_SUCCESS });
       // Update the left side bar
-      dispatch(fetchTrackedFunctions(currentSchema));
+      dispatch(exportMetadata());
       dispatch(_push(getFunctionModifyRoute(currentSchema, name)));
       return;
     };

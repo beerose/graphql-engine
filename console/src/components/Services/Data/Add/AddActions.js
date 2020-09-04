@@ -9,10 +9,9 @@ import {
 import { UPDATE_MIGRATION_STATUS_ERROR } from '../../../Main/Actions';
 import { setTable } from '../DataActions.js';
 
-import { isColTypeString, isPostgresFunction } from '../utils';
-import { sqlEscapeText } from '../../../Common/utils/sqlUtils';
 import { getRunSqlQuery } from '../../../Common/utils/v1QueryUtils';
 import { getTableModifyRoute } from '../../../Common/utils/routesUtils';
+import { dataSource } from '../../../../dataSources';
 
 const SET_DEFAULTS = 'AddTable/SET_DEFAULTS';
 const SET_TABLENAME = 'AddTable/SET_TABLENAME';
@@ -38,9 +37,6 @@ const VALIDATION_ERROR = 'AddTable/VALIDATION_ERROR';
 const RESET_VALIDATION_ERROR = 'AddTable/RESET_VALIDATION_ERROR';
 const SET_CHECK_CONSTRAINTS = 'AddTable/SET_CHECK_CONSTRAINTS';
 const REMOVE_CHECK_CONSTRAINT = 'AddTable/REMOVE_CHECK_CONSTRAINT';
-/*
- * For any action dispatched, the ability to notify the renderer that something is happening
- * */
 
 const setCheckConstraints = constraints => ({
   type: SET_CHECK_CONSTRAINTS,
@@ -140,7 +136,6 @@ const toggleFk = i => ({ type: TOGGLE_FK, data: i });
 const clearFkToggle = () => ({ type: CLEAR_FK_TOGGLE });
 
 // General error during validation.
-// const validationError = (error) => ({type: VALIDATION_ERROR, error: error});
 const validationError = error => {
   alert(error);
   return { type: VALIDATION_ERROR, error };
@@ -161,6 +156,8 @@ const createTableSql = () => {
       checkConstraints,
       tableName,
       columns,
+      tableComment,
+      primaryKeys,
     } = state;
 
     // validations
@@ -168,183 +165,28 @@ const createTableSql = () => {
       alert('Table name cannot be empty');
     }
 
-    const currentCols = columns.filter(c => c.name !== '');
+    const createTableQueries = dataSource.getCreateTableQueries(
+      currentSchema,
+      tableName,
+      columns,
+      primaryKeys,
+      foreignKeys,
+      uniqueKeys,
+      checkConstraints,
+      tableComment
+    );
 
-    const pKeys = state.primaryKeys
-      .filter(p => p !== '')
-      .map(p => currentCols[p].name);
-
-    let hasUUIDDefault = false;
-    const columnSpecificSql = [];
-
-    let tableDefSql = '';
-    for (let i = 0; i < currentCols.length; i++) {
-      tableDefSql +=
-        '"' + currentCols[i].name + '"' + ' ' + currentCols[i].type;
-
-      // check if column is nullable
-      if (!currentCols[i].nullable) {
-        tableDefSql += ' NOT NULL';
-      }
-
-      // check if column has a default value
-      if (
-        currentCols[i].default !== undefined &&
-        currentCols[i].default.value !== ''
-      ) {
-        if (
-          isColTypeString(currentCols[i].type) &&
-          !isPostgresFunction(currentCols[i].default.value)
-        ) {
-          // if a column type is text and if it has a non-func default value, add a single quote by default
-          tableDefSql += " DEFAULT '" + currentCols[i].default.value + "'";
-        } else {
-          tableDefSql += ' DEFAULT ' + currentCols[i].default.value;
-        }
-
-        if (currentCols[i].type === 'uuid') {
-          hasUUIDDefault = true;
-        }
-      }
-
-      // check if column has dependent sql
-      if (currentCols[i].dependentSQLGenerator) {
-        const dependentSql = currentCols[i].dependentSQLGenerator(
-          currentSchema,
-          tableName,
-          currentCols[i].name
-        );
-        columnSpecificSql.push(dependentSql);
-      }
-
-      tableDefSql += i === currentCols.length - 1 ? '' : ', ';
-    }
-
-    // add primary key
-    if (pKeys.length > 0) {
-      tableDefSql += ', PRIMARY KEY (';
-      tableDefSql += pKeys.map(col => '"' + col + '"').join(',');
-      tableDefSql += ') ';
-    }
-
-    // add foreign keys
-    const numFks = foreignKeys.length;
-    let fkDupColumn = null;
-    if (numFks > 1) {
-      foreignKeys.forEach((fk, _i) => {
-        if (_i === numFks - 1) {
-          return;
-        }
-
-        const { colMappings, refTableName, onUpdate, onDelete } = fk;
-
-        const mappingObj = {};
-        const rCols = [];
-        const lCols = [];
-
-        colMappings.slice(0, -1).forEach(cm => {
-          if (mappingObj[cm.column] !== undefined) {
-            fkDupColumn = state.columns[cm.column].name;
-          }
-
-          mappingObj[cm.column] = cm.refColumn;
-          lCols.push(`"${state.columns[cm.column].name}"`);
-          rCols.push(`"${cm.refColumn}"`);
-        });
-
-        if (lCols.length === 0) {
-          return;
-        }
-
-        tableDefSql += `, FOREIGN KEY (${lCols.join(', ')}) REFERENCES "${
-          fk.refSchemaName
-        }"."${refTableName}"(${rCols.join(
-          ', '
-        )}) ON UPDATE ${onUpdate} ON DELETE ${onDelete}`;
-      });
-    }
-
-    if (fkDupColumn) {
+    if (createTableQueries.error) {
       return dispatch(
-        showErrorNotification(
-          'Create table failed',
-          `The column "${fkDupColumn}" seems to be referencing multiple foreign columns`
-        )
+        showErrorNotification('Create table failed', createTableQueries.error)
       );
-    }
-
-    // add unique keys
-    const numUniqueConstraints = uniqueKeys.length;
-    if (numUniqueConstraints > 0) {
-      uniqueKeys.forEach(uk => {
-        if (!uk.length) {
-          return;
-        }
-
-        const uniqueColumns = uk.map(c => `"${state.columns[c].name}"`);
-        tableDefSql += `, UNIQUE (${uniqueColumns.join(', ')})`;
-      });
-    }
-
-    // add check constraints
-    if (checkConstraints.length > 0) {
-      checkConstraints.forEach(constraint => {
-        if (!constraint.name || !constraint.check) {
-          return;
-        }
-
-        tableDefSql += `, CONSTRAINT "${constraint.name}" CHECK (${constraint.check})`;
-      });
-    }
-
-    let sqlCreateTable =
-      'CREATE TABLE ' +
-      '"' +
-      currentSchema +
-      '"' +
-      '.' +
-      '"' +
-      tableName +
-      '"' +
-      '(' +
-      tableDefSql +
-      ');';
-
-    // add comment
-    if (state.tableComment && state.tableComment !== '') {
-      sqlCreateTable +=
-        ' COMMENT ON TABLE ' +
-        '"' +
-        currentSchema +
-        '"' +
-        '.' +
-        '"' +
-        tableName +
-        '"' +
-        ' IS ' +
-        sqlEscapeText(state.tableComment) +
-        ';';
-    }
-
-    if (columnSpecificSql.length) {
-      columnSpecificSql.forEach(csql => {
-        sqlCreateTable += csql.upSql;
-      });
     }
 
     // apply migrations
     const migrationName = 'create_table_' + currentSchema + '_' + tableName;
 
     // up migration
-    const upQueryArgs = [];
-
-    if (hasUUIDDefault) {
-      const sqlCreateExtension = 'CREATE EXTENSION IF NOT EXISTS pgcrypto;';
-
-      upQueryArgs.push(getRunSqlQuery(sqlCreateExtension));
-    }
-
-    upQueryArgs.push(getRunSqlQuery(sqlCreateTable));
+    const upQueryArgs = createTableQueries.map(sql => getRunSqlQuery(sql));
 
     upQueryArgs.push({
       type: 'add_existing_table_or_view',
@@ -360,8 +202,7 @@ const createTableSql = () => {
     };
 
     // down migration
-    const sqlDropTable =
-      'DROP TABLE ' + '"' + currentSchema + '"' + '.' + '"' + tableName + '"';
+    const sqlDropTable = dataSource.getDropTableSql(currentSchema, tableName);
 
     const downQuery = {
       type: 'bulk',
