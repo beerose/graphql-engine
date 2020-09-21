@@ -290,7 +290,6 @@ const fetchDataInit = () => (dispatch, getState) => {
 
   const query = dataSource.schemaList;
   query.source = getState().tables.currentDataSource;
-  console.log({ query, source: getState().tables.currentDataSource });
 
   const options = {
     credentials: globalCookiePolicy,
@@ -390,7 +389,7 @@ const fetchSchemaList = () => (dispatch, getState) => {
   const currentSource = getState().tables.currentDataSource;
   const query = dataSource.schemaList;
   query.source = currentSource;
-  console.log({ query, source: getState().tables.currentDataSource });
+
   const options = {
     credentials: globalCookiePolicy,
     method: 'POST',

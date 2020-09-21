@@ -143,16 +143,12 @@ const dataRouterUtils = (connect, store, composeOnEnterHooks) => {
       .dispatch(exportMetadata())
       .then(() => store.dispatch(fetchSchemaList()))
       .then(() => {
-        // todo: probably need to add export metadata as well
         const {
           tables: { schemaList, allSchemas, currentSchema: prevSchema },
-          metadata,
         } = store.getState();
 
         const { source, driver } = getInitDataSource(store.getState());
         setDriver(driver);
-
-        console.log({ source, metadata, driver });
 
         let currentSchema = nextState.params.schema;
         if (

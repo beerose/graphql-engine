@@ -23,7 +23,7 @@ export const getDataSourceMatadata = (state: ReduxState) => {
     return state.metadata.metadataObject.sources.find(
       source =>
         source.name === currentDataSource &&
-        (source.kind || 'postgres') === currentDriver // todo: server bug
+        (source.kind || 'postgres') === currentDriver
     );
   }
   return state.metadata.metadataObject;
