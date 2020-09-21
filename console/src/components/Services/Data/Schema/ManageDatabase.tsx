@@ -16,21 +16,7 @@ import {
   addDataSource,
 } from '../../../../metadata/actions';
 import { RightContainer } from '../../../Common/Layout/RightContainer';
-
-const dummyData: DataSource[] = [
-  {
-    name: 'Warehouse DB',
-    driver: 'postgres',
-    url: 'postgres://postgres:@105.245.144.63:5432/postgres',
-    fromEnv: false,
-  },
-  {
-    name: 'Users DB',
-    driver: 'mysql',
-    url: 'mysql://root:password@195.38.139.16:3306/users_database',
-    fromEnv: false,
-  },
-];
+import { getDataSources } from '../../../../metadata/selector';
 
 type DatabaseListItemProps = {
   dataSource: DataSource;
@@ -94,6 +80,7 @@ const crumbs = [
 ];
 
 const ManageDatabase: React.FC<ManageDatabaseInjectedProps> = ({
+  dataSources,
   dispatch,
 }) => {
   const onRemove = (name: string, driver: Driver, cb: () => void) => {
@@ -114,18 +101,16 @@ const ManageDatabase: React.FC<ManageDatabaseInjectedProps> = ({
           driver: data.driver,
           payload: {
             name: data.name,
-            connection_pool_settings: {
-              ...(data.connection_pool_settings?.connection_idle_timeout && {
+            connection_pool_setting: {
+              ...(data.connection_pool_setting?.connection_idle_timeout && {
                 connection_idle_timeout:
-                  data.connection_pool_settings.connection_idle_timeout,
+                  data.connection_pool_setting.connection_idle_timeout,
               }),
-              ...(data.connection_pool_settings?.max_connections && {
-                max_connections: data.connection_pool_settings.max_connections,
+              ...(data.connection_pool_setting?.max_connections && {
+                max_connections: data.connection_pool_setting.max_connections,
               }),
             },
-            dbUrl: {
-              [data.fromEnv ? 'from_env' : 'from_value']: data.url,
-            },
+            dbUrl: data.url,
           },
         },
         successCallback
@@ -133,7 +118,7 @@ const ManageDatabase: React.FC<ManageDatabaseInjectedProps> = ({
     );
   };
 
-  const dataList = dummyData.map(data => (
+  const dataList = dataSources.map(data => (
     <DatabaseListItem
       dataSource={data}
       onReload={onReload}
@@ -176,6 +161,7 @@ const ManageDatabase: React.FC<ManageDatabaseInjectedProps> = ({
 const mapStateToProps = (state: ReduxState) => {
   return {
     schemaList: state.tables.schemaList,
+    dataSources: getDataSources(state),
   };
 };
 const manageConnector = connect(
