@@ -17,6 +17,8 @@ import {
 } from '../../../../metadata/actions';
 import { RightContainer } from '../../../Common/Layout/RightContainer';
 import { getDataSources } from '../../../../metadata/selector';
+import { getConfirmation } from '../../../Common/utils/jsUtils';
+
 
 type DatabaseListItemProps = {
   dataSource: DataSource;
@@ -84,7 +86,14 @@ const ManageDatabase: React.FC<ManageDatabaseInjectedProps> = ({
   dispatch,
 }) => {
   const onRemove = (name: string, driver: Driver, cb: () => void) => {
-    (dispatch(removeDataSource({ driver, name })) as any).then(cb); // todo
+    const confirmation = getConfirmation(
+      `Your action will remove the "${name}" data source`,
+      true,
+      name
+    );
+    if (confirmation) {
+      (dispatch(removeDataSource({ driver, name })) as any).then(cb); // todo
+    }
   };
 
   const onReload = (name: string, driver: Driver, cb: () => void) => {
@@ -128,13 +137,15 @@ const ManageDatabase: React.FC<ManageDatabaseInjectedProps> = ({
   return (
     <RightContainer>
       <div
-        className={`container-fluid ${styles.padd_left_remove} ${styles.padd_top} ${styles.manage_dbs_page}`}
+        className={`container-fluid ${styles.padd_left_remove} ${styles.manage_dbs_page}`}
       >
         <div className={styles.padd_left}>
           <Helmet title="Manage - Data | Hasura" />
           <BreadCrumb breadCrumbs={crumbs} />
           <div className={styles.display_flex}>
-            <h2 className={`${styles.headerText} ${styles.display_inline}`}>
+            <h2
+              className={`${styles.headerText} ${styles.display_inline} ${styles.padd_top}`}
+            >
               Manage Databases
             </h2>
             {/* <Button color="yellow" size="md" className={styles.add_mar_left}>
