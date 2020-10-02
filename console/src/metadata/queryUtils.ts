@@ -103,8 +103,8 @@ export type MetadataQueryType =
   | 'create_array_relationship'
   | 'create_object_relationship'
   | 'create_array_relationship'
-  | 'create_scheduled_event'
-  | 'create_cron_trigger';
+  | 'create_cron_trigger'
+  | 'create_scheduled_event';
 
 export type MetadataQueries = Record<Driver, Record<MetadataQueryType, string>>;
 
