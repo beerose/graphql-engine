@@ -81,6 +81,10 @@ const DataPageContainer = ({
     ));
   };
 
+  const currentDataSourceDetails = dataSources.find(
+    s => s.name === currentDataSource
+  );
+
   const sidebarContent = (
     <ul>
       <li
@@ -102,9 +106,10 @@ const DataPageContainer = ({
               <select
                 onChange={onDatabaseChange}
                 className={styles.changeSchema + ' form-control'}
-                defaultValue={dataSources.find(
-                  s => s.name === currentDataSource
-                )}
+                value={JSON.stringify([
+                  currentDataSourceDetails.name,
+                  currentDataSourceDetails.driver,
+                ])}
               >
                 {dataSources.map(s => (
                   <option
