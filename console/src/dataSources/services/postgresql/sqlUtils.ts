@@ -4,7 +4,7 @@ import { FunctionState } from './types';
 import { QualifiedTable } from '../../../metadata/types';
 import { quoteDefault } from '../../../components/Services/Data/utils';
 
-const sqlEscapeText = (rawText: string) => {
+export const sqlEscapeText = (rawText: string) => {
   let text = rawText;
 
   if (text) {
@@ -607,7 +607,7 @@ export const getAddColumnSql = (
 };
 
 export const getDropNotNullSql = (
-  tableName: string,
+  tableName: string,  
   schemaName: string,
   columnName: string
 ) => `
