@@ -607,7 +607,7 @@ export const getAddColumnSql = (
 };
 
 export const getDropNotNullSql = (
-  tableName: string,  
+  tableName: string,
   schemaName: string,
   columnName: string
 ) => `

@@ -1,5 +1,6 @@
-import { FrequentlyUsedColumn } from "../../types";
-import { isColTypeString } from "../postgresql";
+import { FrequentlyUsedColumn } from '../../types';
+import { isColTypeString } from '.';
+import { quoteDefault } from '../../../components/Services/Data/utils';
 
 const sqlEscapeText = (text?: string | null) => {
   if (!text) {
@@ -36,21 +37,21 @@ export const getDropColumnSql = (
   if (!options) {
     return sql;
   }
-  
+
   if (options.sqlGenerator) {
     sql = `${
       options.sqlGenerator(schemaName, tableName, columnName).downSql
     } \n`;
   }
-  
+
   sql += `alter table "${schemaName}"."${tableName}" drop column "${columnName}"`;
-  
+
   return sql;
 };
 
 // getDropNotNullSql,
 export const getDropNotNullSql = (
-  tableName: string,  
+  tableName: string,
   schemaName: string,
   columnName: string
 ) => `
@@ -83,12 +84,12 @@ export const getSetColumnDefaultSql = (
   tableName: string,
   schemaName: string,
   columnName: string,
-  constraintName: string, 
+  constraintName: string,
   defaultValue: any,
   columnType: string
 ) => {
   let defWithQuotes = '';
-    
+
   if (isColTypeString(columnType) && !isSQLFunction(defaultValue)) {
     defWithQuotes = `'${defaultValue}'`;
   } else {
@@ -116,7 +117,36 @@ export const getAddColumnSql = (
   let sql = `
   alter table "${schemaName}"."${tableName}" add column "${columnName}" ${columnType}
 `;
-// Add options condition
+  if (!options) {
+    return sql;
+  }
+
+  if (options.unique) {
+    sql += ` unique`;
+  }
+  if (options.default) {
+    const defWithQuotes = quoteDefault(options.default);
+    sql += ` default ${defWithQuotes}`;
+  }
+  if (options.nullable) {
+    sql += ' null';
+  } else {
+    if (options.default === '') {
+      // error
+    } else {
+      sql += ` not null`;
+    }
+
+    sql += ';';
+
+    if (options.sqlGenerator) {
+      sql += '\n';
+      sql += options.sqlGenerator(schemaName, tableName, columnName).upSql;
+    }
+    return sql;
+  }
+
+  // Add options condition
 };
 
 // getDropConstraintSql,
@@ -150,7 +180,7 @@ export const getCreateTriggerSql = (
   let sql = `CREATE TRIGGER "${triggerName}"
 ON "${tableSchema}"."${tableName}"
 ${trigger.action_timing} ${trigger.event_manipulation} AS ${trigger.action_statement};`;
-  
+
   if (trigger.comment) {
     sql += `COMMENT ON TRIGGER "${triggerName}" ON "${tableSchema}"."${tableName}"
 IS ${sqlEscapeText(trigger.comment)};`;
@@ -182,7 +212,7 @@ export const getSetCommentSql = (
     }
 `;
   }
-  
+
   return `
 comment on ${on} "${schemaName}"."${tableName}" is ${
     comment ? sqlEscapeText(comment) : 'NULL'
@@ -230,7 +260,9 @@ export const getAlterForeignKeySql = (
   onUpdate: string,
   onDelete: string
 ) => `
-  alter table "${from.schemaName}"."${from.tableName}" drop constraint "${oldConstraint}";
+  alter table "${from.schemaName}"."${
+  from.tableName
+}" drop constraint "${oldConstraint}";
   alter table "${from.schemaName}"."${from.tableName}"
   add constraint "${newConstraint}"
   foreign key (${from.columns.join(', ')})

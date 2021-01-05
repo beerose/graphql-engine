@@ -1,5 +1,5 @@
 import { DataSourcesAPI } from '../..';
-import { TableColumn, FrequentlyUsedColumn, Table } from '../../types';
+import { TableColumn, Table } from '../../types';
 import { Operations, QUERY_TYPES } from '../../common';
 
 export const isTable = (table: Table) => {
@@ -75,7 +75,6 @@ export const getColumnType = (column: TableColumn) => {
 export const isColTypeString = (colType: string) =>
   ['text', 'varchar', 'char', 'bpchar', 'name'].includes(colType);
 
-
 export const getTableSupportedQueries = (table: Table) => {
   let supportedQueryTypes: Operations[];
 
@@ -115,11 +114,6 @@ export const getTableSupportedQueries = (table: Table) => {
 
   return supportedQueryTypes;
 };
-
-// schema list has to updated depending on serevr side 
-const schemaListSql = `SELECT schema_name FROM information_schema.schemata WHERE
-schema_name NOT IN ('information_schema', 'pg_catalog', 'hdb_catalog', 'hdb_views', 'pg_temp_1', 'pg_toast_temp_1', 'pg_toast')
-ORDER BY schema_name ASC;`;
 
 export const sqlserver: DataSourcesAPI = {
   getFunctionSchema: () => {
@@ -176,13 +170,10 @@ export const sqlserver: DataSourcesAPI = {
   cascadeSqlQuery: () => {
     throw new Error('not implemented');
   },
-  schemaListSql: '',
   dependencyErrorCode: '',
   columnDataTypes: [],
   commonDataTypes: [],
-  createSQLRegex: () => {
-    throw new Error('not implemented');
-  },
+  createSQLRegex,
   // displayTableName,
   // getCreateTableQueries,
   // isColTypeString,
