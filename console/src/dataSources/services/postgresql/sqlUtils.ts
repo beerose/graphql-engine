@@ -255,7 +255,7 @@ export const getCreateTableQueries = (
 
   const pKeys = primaryKeys
     .filter(p => p !== '')
-    .map(p => currentCols[p as number].name);
+    .map(p => currentCols[p as number].name);  
 
   const columnSpecificSql: any[] = [];
 

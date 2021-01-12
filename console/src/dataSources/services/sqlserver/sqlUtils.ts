@@ -299,6 +299,178 @@ export const getRenameColumnQuery = (
   sp_rename "${schemaName}"."${tableName}"."${oldName}", "${newName}"
 `;
 
+export type Col = {
+  name: string;
+  type: string;
+  nullable: boolean;
+  default?: { value: string };
+  dependentSQLGenerator?: (...args: any[]) => string;
+};
+
+export const getCreateTableQueries = (
+  currentSchema: string,
+  tableName: string,
+  columns: Col[],
+  primaryKeys: (number | string)[],
+  foreignKeys: any[],
+  uniqueKeys: any[],
+  checkConstraints: any[],
+  tableComment?: string
+) => {
+  const currentCols = columns.filter(c => c.name !== '');
+  let hasGUIDDefault = false;
+
+  const pKeys = primaryKeys
+    .filter(p => p !== '')
+    .map(p => currentCols[p as number].name);  
+
+  const columnSpecificSql: any[] = [];
+
+  let tableDefSql = '';
+  for (let i = 0; i < currentCols.length; i++) {
+    tableDefSql += `"${currentCols[i].name}" ${currentCols[i].type}`;
+
+    // check if column is nullable
+    if (!currentCols[i].nullable) {
+      tableDefSql += ' NOT NULL';
+    }
+
+    // check if column has a default value
+    if (
+      currentCols[i].default !== undefined &&
+      currentCols[i].default?.value !== ''
+    ) {
+      if (
+        isColTypeString(currentCols[i].type) &&
+        !isSQLFunction(currentCols[i]?.default?.value)
+      ) {
+        // if a column type is text and if it has a non-func default value, add a single quote by default
+        tableDefSql += ` DEFAULT '${currentCols[i]?.default?.value}'`;
+      } else {
+        tableDefSql += ` DEFAULT ${currentCols[i]?.default?.value}`;
+      }
+
+      if (currentCols[i].type === 'guid') {
+        hasGUIDDefault = true;
+      }
+    }
+
+    // check if column has dependent sql
+    const depGen = currentCols[i].dependentSQLGenerator;
+    if (depGen) {
+      const dependentSql = depGen(
+        currentSchema,
+        tableName,
+        currentCols[i].name
+      );
+      columnSpecificSql.push(dependentSql);
+    }
+
+    tableDefSql += i === currentCols.length - 1 ? '' : ', ';
+  }
+
+  // add primary key
+  if (pKeys.length > 0) {
+    tableDefSql += ', PRIMARY KEY (';
+    tableDefSql += pKeys.map(col => `"${col}"`).join(',');
+    tableDefSql += ') ';
+  }
+
+  // add foreign keys
+  const numFks = foreignKeys.length;
+  let fkDupColumn = null;
+  if (numFks > 1) {
+    foreignKeys.forEach((fk, _i) => {
+      if (_i === numFks - 1) {
+        return;
+      }
+
+      const { colMappings, refTableName, onUpdate, onDelete } = fk;
+
+      const mappingObj: Record<string, string> = {};
+      const rCols: string[] = [];
+      const lCols: string[] = [];
+
+      colMappings
+        .slice(0, -1)
+        .forEach((cm: { column: string | number; refColumn: string }) => {
+          if (mappingObj[cm.column] !== undefined) {
+            fkDupColumn = columns[cm.column as number].name;
+          }
+
+          mappingObj[cm.column] = cm.refColumn;
+          lCols.push(`"${columns[cm.column as number].name}"`);
+          rCols.push(`"${cm.refColumn}"`);
+        });
+
+      if (lCols.length === 0) {
+        return;
+      }
+
+      tableDefSql += `, FOREIGN KEY (${lCols.join(', ')}) REFERENCES "${
+        fk.refSchemaName
+      }"."${refTableName}"(${rCols.join(
+        ', '
+      )}) ON UPDATE ${onUpdate} ON DELETE ${onDelete}`;
+    });
+  }
+
+  if (fkDupColumn) {
+    return {
+      error: `The column "${fkDupColumn}" seems to be referencing multiple foreign columns`,
+    };
+  }
+
+  // add unique keys
+  const numUniqueConstraints = uniqueKeys.length;
+  if (numUniqueConstraints > 0) {
+    uniqueKeys.forEach(uk => {
+      if (!uk.length) {
+        return;
+      }
+
+      const uniqueColumns = uk.map((c: number) => `"${columns[c].name}"`);
+      tableDefSql += `, UNIQUE (${uniqueColumns.join(', ')})`;
+    });
+  }
+
+  // add check constraints
+  if (checkConstraints.length > 0) {
+    checkConstraints.forEach(constraint => {
+      if (!constraint.name || !constraint.check) {
+        return;
+      }
+
+      tableDefSql += `, CONSTRAINT "${constraint.name}" CHECK (${constraint.check})`;
+    });
+  }
+
+  let sqlCreateTable = `CREATE TABLE "${currentSchema}"."${tableName}" (${tableDefSql});`;
+
+  // add comment
+  if (tableComment && tableComment !== '') {
+    sqlCreateTable += `COMMENT ON TABLE "${currentSchema}".${tableName} IS ${sqlEscapeText(
+      tableComment
+    )};`;
+  }
+
+  if (columnSpecificSql.length) {
+    columnSpecificSql.forEach(csql => {
+      sqlCreateTable += csql.upSql;
+    });
+  }
+
+  const sqlQueries: string[] = [sqlCreateTable];
+
+  if (hasGUIDDefault) {
+    const sqlCreateExtension = 'CREATE EXTENSION IF NOT EXISTS pgcrypto;';
+
+    sqlQueries.push(sqlCreateExtension);
+  }
+
+  return sqlQueries;
+};
+
 // getDropSchemaSql,
 export const getDropSchemaSql = (schemaName: string) =>
   `drop schema "${schemaName}";`;
@@ -347,3 +519,20 @@ export const cascadeSqlQuery = (sql: string) => {
   }
   return `${sql} CASCADE;`;
 };
+
+export const getDatabaseInfo = `
+SELECT
+		TABLE_NAME, 
+		TABLE_SCHEMA,
+		STRING_AGG(COLUMN_NAME, ',') as columns
+	FROM
+		information_schema.columns
+    where
+        table_schema NOT in('information_schema')
+		AND table_schema NOT LIKE 'guest'
+		AND table_schema NOT LIKE 'sys' 
+	GROUP BY
+		table_name,
+		table_schema
+    for JSON path
+`;
