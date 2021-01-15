@@ -255,7 +255,7 @@ export const getCreateTableQueries = (
 
   const pKeys = primaryKeys
     .filter(p => p !== '')
-    .map(p => currentCols[p as number].name);  
+    .map(p => currentCols[p as number].name);
 
   const columnSpecificSql: any[] = [];
 
@@ -1180,20 +1180,17 @@ export const getEventInvocationInfoByIDSql = (
  */
 export const getDatabaseInfo = `
 SELECT
-	COALESCE(json_agg(row_to_json(info)), '[]'::JSON)
-FROM (
-	SELECT
-		table_name,
-		table_schema,
-		ARRAY_AGG("column_name") as columns
-	FROM
-		information_schema.columns
-	WHERE
-		table_schema NOT in('information_schema', 'pg_catalog')
-		AND table_schema NOT LIKE 'pg_toast%'
-		AND table_schema NOT LIKE 'pg_temp_%'
-		AND table_schema NOT LIKE 'hdb_catalog'
-	GROUP BY
-		table_name,
-		table_schema) AS info;
+    TABLE_NAME, 
+    TABLE_SCHEMA,
+    ('[' + STRING_AGG(QUOTENAME("COLUMN_NAME", ''''), ',') + ']') as columns
+  FROM
+    information_schema.columns
+    where
+        table_schema NOT in('information_schema')
+    AND table_schema NOT LIKE 'guest'
+    AND table_schema NOT LIKE 'sys' 
+  GROUP BY
+    table_name,
+    table_schema
+    for JSON path;
 `;
